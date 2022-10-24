@@ -294,13 +294,13 @@ class PairwiseFeatureExtractor(Module):
         # assert torch_equal(pair_bbox_geo_info, pair_bboxs_info_new)
         # head_rep, tail_rep = prod_rep.hsplit(2)
         if self.using_explicit_pairwise is False:
-            return obj_pair_feat4rel_rep, None
+            del head_rep, tail_rep
 
         if self.pairwise_detach is True:
             head_rep = head_rep.clone().detach()
             tail_rep = tail_rep.clone().detach()
 
-        if self.explicit_pairwise_data == 'hadamard':
+        if self.using_explicit_pairwise is True and self.explicit_pairwise_data == 'hadamard':
             pairwise_obj_ctx = head_rep * tail_rep
             del head_rep, tail_rep
 
@@ -310,8 +310,9 @@ class PairwiseFeatureExtractor(Module):
         # breakpoint()
         # pairwise_obj_ctx = self.explicit_pairwise_func(pairwise_obj_ctx)
         # obj_pair_feat4rel_rep = self.pairwise_rel_feat_finalize_fc(obj_pair_feat4rel_rep)  # (num_rel, hidden_dim)
-
-        return self.explicit_pairwise_func(pairwise_obj_ctx), self.pairwise_rel_feat_finalize_fc(obj_pair_feat4rel_rep)
+        if self.using_explicit_pairwise is False:
+            return self.pairwise_rel_feat_finalize_fc(obj_pair_feat4rel_rep), None
+        return self.pairwise_rel_feat_finalize_fc(obj_pair_feat4rel_rep), self.explicit_pairwise_func(pairwise_obj_ctx)
 
 
     def forward(self, inst_roi_feats, union_features, inst_proposals, rel_pair_idxs, ):
@@ -376,7 +377,10 @@ class PairwiseFeatureExtractor(Module):
                 if self.rel_feat_dim_not_match:
                     union_features = self.rel_feature_up_dim(union_features)
                 # breakpoint()
-                rel_features = union_features + rel_features + explicit_pairwise_features
+                if explicit_pairwise_features is None:
+                    rel_features = union_features + rel_features
+                else:
+                    rel_features = union_features + rel_features + explicit_pairwise_features
 
         elif self.rel_feature_type == "union":
             if self.rel_feat_dim_not_match:
