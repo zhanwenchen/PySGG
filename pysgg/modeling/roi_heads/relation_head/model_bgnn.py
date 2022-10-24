@@ -750,23 +750,23 @@ class BGNNContext(nn.Module):
             feature_data = aggregate_feat
         return feature_data
 
-    def pairwise_rel_features(self, augment_obj_feat, rel_pair_idxs):
-        pairwise_obj_feats_fused = self.pairwise_obj_feat_updim_fc(augment_obj_feat)
-        pairwise_obj_feats_fused = pairwise_obj_feats_fused.view(
-            pairwise_obj_feats_fused.size(0), 2, self.hidden_dim
-        )
-        head_rep = pairwise_obj_feats_fused[:, 0].contiguous().view(-1, self.hidden_dim)
-        tail_rep = pairwise_obj_feats_fused[:, 1].contiguous().view(-1, self.hidden_dim)
-
-        obj_pair_feat4rel_rep = torch.cat(
-            (head_rep[rel_pair_idxs[:, 0]], tail_rep[rel_pair_idxs[:, 1]]), dim=-1
-        )
-
-        obj_pair_feat4rel_rep = self.pairwise_rel_feat_finalize_fc(
-            obj_pair_feat4rel_rep
-        )  # (num_rel, hidden_dim)
-
-        return obj_pair_feat4rel_rep
+    # def pairwise_rel_features(self, augment_obj_feat, rel_pair_idxs):
+    #     pairwise_obj_feats_fused = self.pairwise_obj_feat_updim_fc(augment_obj_feat)
+    #     pairwise_obj_feats_fused = pairwise_obj_feats_fused.view(
+    #         pairwise_obj_feats_fused.size(0), 2, self.hidden_dim
+    #     )
+    #     head_rep = pairwise_obj_feats_fused[:, 0].contiguous().view(-1, self.hidden_dim)
+    #     tail_rep = pairwise_obj_feats_fused[:, 1].contiguous().view(-1, self.hidden_dim)
+    #
+    #     obj_pair_feat4rel_rep = torch.cat(
+    #         (head_rep[rel_pair_idxs[:, 0]], tail_rep[rel_pair_idxs[:, 1]]), dim=-1
+    #     )
+    #
+    #     obj_pair_feat4rel_rep = self.pairwise_rel_feat_finalize_fc(
+    #         obj_pair_feat4rel_rep
+    #     )  # (num_rel, hidden_dim)
+    #
+    #     return obj_pair_feat4rel_rep
 
     def forward(
         self,

@@ -1,58 +1,83 @@
 import itertools
 
-import ipdb
+# import ipdb
 import numpy as np
-import torch
-import torch.nn.functional as F
+from torch.jit import script as torch_jit_script
+from torch import (
+    min as torch_min,
+    max as torch_max,
+    nonzero as torch_nonzero,
+    equal as torch_equal,
+    cat as torch_cat,
+    clamp as torch_clamp,
+    zeros as torch_zeros,
+    tensor as torch_tensor,
+    int64 as torch_int64,
+)
+from torch.nn.init import normal_, constant_, xavier_normal_, orthogonal_
+from torch.nn.functional import softmax as F_softmax
 
 
-def get_box_info(boxes, need_norm=True, proposal=None):
+@torch_jit_script
+def get_box_info(boxes):
     """
     input: [batch_size, (x1,y1,x2,y2)]
     output: [batch_size, (x1,y1,x2,y2,cx,cy,w,h)]
     """
     wh = boxes[:, 2:] - boxes[:, :2] + 1.0
-    center_box = torch.cat((boxes[:, :2] + 0.5 * wh, wh), 1)
-    box_info = torch.cat((boxes, center_box), 1)
-    if need_norm:
-        box_info = box_info / float(max(max(proposal.size[0], proposal.size[1]), 100))
+    center_box = torch_cat((boxes[:, :2] + 0.5 * wh, wh), 1)
+    box_info = torch_cat((boxes, center_box), 1)
+    # if need_norm:
+    #     breakpoint()
+    #     box_info /= float(max(max(proposal.size[0], proposal.size[1]), 100))
     return box_info
 
 
+def get_box_info_norm(boxes, proposal):
+    """
+    input: [batch_size, (x1,y1,x2,y2)]
+    output: [batch_size, (x1,y1,x2,y2,cx,cy,w,h)]
+    """
+    wh = boxes[:, 2:] - boxes[:, :2] + 1.0
+    center_box = torch_cat((boxes[:, :2] + 0.5 * wh, wh), 1)
+    box_info = torch_cat((boxes, center_box), 1)
+    box_info /= float(max(max(proposal.size[0], proposal.size[1]), 100))
+    return box_info
+
+
+@torch_jit_script
 def get_box_pair_info(box1, box2):
     """
-    input: 
+    input:
         box1 [batch_size, (x1,y1,x2,y2,cx,cy,w,h)]
         box2 [batch_size, (x1,y1,x2,y2,cx,cy,w,h)]
-    output: 
+    output:
         32-digits: [box1, box2, unionbox, intersectionbox]
     """
     # union box
     unionbox = box1[:, :4].clone()
-    unionbox[:, 0] = torch.min(box1[:, 0], box2[:, 0])
-    unionbox[:, 1] = torch.min(box1[:, 1], box2[:, 1])
-    unionbox[:, 2] = torch.max(box1[:, 2], box2[:, 2])
-    unionbox[:, 3] = torch.max(box1[:, 3], box2[:, 3])
-    union_info = get_box_info(unionbox, need_norm=False)
+    unionbox[:, [0, 1]] = torch_min(box1[:, [0, 1]], box2[:, [0, 1]])
+    unionbox[:, [2,3]] = torch_max(box1[:, [2,3]], box2[:, [2,3]])
+
+    union_info = get_box_info(unionbox)
 
     # intersection box
-    intersextion_box = box1[:, :4].clone()
-    intersextion_box[:, 0] = torch.max(box1[:, 0], box2[:, 0])
-    intersextion_box[:, 1] = torch.max(box1[:, 1], box2[:, 1])
-    intersextion_box[:, 2] = torch.min(box1[:, 2], box2[:, 2])
-    intersextion_box[:, 3] = torch.min(box1[:, 3], box2[:, 3])
-    case1 = torch.nonzero(
-        intersextion_box[:, 2].contiguous().view(-1) < intersextion_box[:, 0].contiguous().view(-1)).view(-1)
-    case2 = torch.nonzero(
-        intersextion_box[:, 3].contiguous().view(-1) < intersextion_box[:, 1].contiguous().view(-1)).view(-1)
-    intersextion_info = get_box_info(intersextion_box, need_norm=False)
+    intersection_box = box1[:, :4].clone()
+    intersection_box[:, [0,1]] = torch_max(box1[:, [0,1]], box2[:, [0,1]])
+    intersection_box[:, [2,3]] = torch_min(box1[:, [2,3]], box2[:, [2,3]])
+    case1 = torch_nonzero(
+        intersection_box[:, 2].contiguous().view(-1) < intersection_box[:, 0].contiguous().view(-1)).view(-1)
+    case2 = torch_nonzero(
+        intersection_box[:, 3].contiguous().view(-1) < intersection_box[:, 1].contiguous().view(-1)).view(-1)
+    intersextion_info = get_box_info(intersection_box)
     if case1.numel() > 0:
         intersextion_info[case1, :] = 0
     if case2.numel() > 0:
         intersextion_info[case2, :] = 0
-    return torch.cat((box1, box2, union_info, intersextion_info), 1)
+    return torch_cat((box1, box2, union_info, intersextion_info), 1)
 
 
+@torch_jit_script
 def nms_overlaps(boxes):
     """ get overlaps for each channel
     The overlapping of each box on each category
@@ -61,34 +86,32 @@ def nms_overlaps(boxes):
     assert boxes.dim() == 3
     N = boxes.size(0)
     nc = boxes.size(1)
-    max_xy = torch.min(boxes[:, None, :, 2:].expand(N, N, nc, 2),
+    max_xy = torch_min(boxes[:, None, :, 2:].expand(N, N, nc, 2),
                        boxes[None, :, :, 2:].expand(N, N, nc, 2))
 
-    min_xy = torch.max(boxes[:, None, :, :2].expand(N, N, nc, 2),
+    min_xy = torch_max(boxes[:, None, :, :2].expand(N, N, nc, 2),
                        boxes[None, :, :, :2].expand(N, N, nc, 2))
     # the delta x,y in intersection of box pairs in same category
-    inter = torch.clamp((max_xy - min_xy + 1.0), min=0)
+    inter = torch_clamp((max_xy - min_xy + 1.0), min=0)
 
     # n, n, 151
-    inters = inter[:, :, :, 0] * inter[:, :, :, 1]
+    inter = inter.prod(-1)
     boxes_flat = boxes.view(-1, 4)
     areas_flat = (boxes_flat[:, 2] - boxes_flat[:, 0] + 1.0) * (
             boxes_flat[:, 3] - boxes_flat[:, 1] + 1.0)
     areas = areas_flat.view(boxes.size(0), boxes.size(1))
-    union = -inters + areas[None] + areas[:, None]
-    return inters / union
+    union = -inter + areas[None] + areas[:, None]
+    return inter / union
 
 
 def layer_init(layer, init_para=0.1, normal=False, xavier=True):
     xavier = False if normal == True else True
     if normal:
-        torch.nn.init.normal_(layer.weight, mean=0, std=init_para)
-        torch.nn.init.constant_(layer.bias, 0)
-        return
+        normal_(layer.weight, mean=0, std=init_para)
+        constant_(layer.bias, 0)
     elif xavier:
-        torch.nn.init.xavier_normal_(layer.weight, gain=1.0)
-        torch.nn.init.constant_(layer.bias, 0)
-        return
+        xavier_normal_(layer.weight, gain=1.0)
+        constant_(layer.bias, 0)
 
 
 def obj_prediction_nms(boxes_per_cls, pred_logits, nms_thresh=0.3):
@@ -108,10 +131,10 @@ def obj_prediction_nms(boxes_per_cls, pred_logits, nms_thresh=0.3):
                                                   boxes_per_cls.size(0),
                                                   boxes_per_cls.size(1)).cpu().numpy() >= nms_thresh
 
-    prob_sampled = F.softmax(pred_logits, 1).detach().cpu().numpy()
+    prob_sampled = F_softmax(pred_logits, 1).detach().cpu().numpy()
     prob_sampled[:, 0] = 0  # set bg to 0
 
-    pred_label = torch.zeros(num_obj, device=pred_logits.device, dtype=torch.int64)
+    pred_label = torch_zeros(num_obj, device=pred_logits.device, dtype=torch_int64)
 
     for i in range(num_obj):
         # take the global maximum score prediction boxes
@@ -153,11 +176,11 @@ def block_orthogonal(tensor, split_sizes, gain=1.0):
         assert len(block_slice) == 2
         sizes = [x.stop - x.start for x in block_slice]
         tensor_copy = tensor.new(max(sizes), max(sizes))
-        torch.nn.init.orthogonal_(tensor_copy, gain=gain)
+        orthogonal_(tensor_copy, gain=gain)
         tensor[block_slice] = tensor_copy[0:sizes[0], 0:sizes[1]]
 
 
-def percentile(t: torch.tensor, q: float):
+def percentile(t: torch_tensor, q: float):
     """
     Return the ``q``-th percentile of the flattened input tensor's data.
 

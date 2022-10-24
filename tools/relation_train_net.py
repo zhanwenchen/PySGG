@@ -5,19 +5,23 @@ Basic training script for PyTorch
 
 # Set up custom environment before nearly anything else is imported
 # NOTE: this should be the first import (no not reorder)
-
 import argparse
 import datetime
 import os
 import random
 import time
-import threading
-import json
-
-import gpustat
 import numpy as np
-import torch
-
+from torch import (
+    cat as torch_cat,
+    tensor as torch_tensor,
+    device as torch_device,
+    manual_seed,
+)
+from torch.cuda import max_memory_allocated, set_device, manual_seed as cuda_manual_seed, manual_seed_all
+from torch.distributed import init_process_group
+from torch.nn.parallel import DistributedDataParallel
+from torch.backends import cudnn
+from torch.autograd import set_detect_anomaly
 from pysgg.config import cfg
 from pysgg.data import make_data_loader
 from pysgg.engine.inference import inference
@@ -33,7 +37,7 @@ from pysgg.utils.comm import synchronize, get_rank, all_gather
 from pysgg.utils.logger import setup_logger, debug_print, TFBoardHandler_LEVEL
 from pysgg.utils.metric_logger import MetricLogger
 from pysgg.utils.miscellaneous import mkdir, save_config
-from pysgg.utils.global_buffer import save_buffer
+# from pysgg.utils.global_buffer import save_buffer
 
 # See if we can use apex.DistributedDataParallel instead of the torch default,
 # and enable mixed-precision via apex.amp
@@ -42,21 +46,15 @@ try:
 except ImportError:
     raise ImportError("Use APEX for multi-precision via apex.amp")
 
+def seed(seed):
+    cuda_manual_seed(seed)  # 为当前GPU设置随机种子
+    manual_seed_all(seed)  # 为所有GPU设置随机种子
+    manual_seed(seed)
+    random.seed(seed)
+    np.random.seed(seed)
+
+
 SEED = 666
-
-torch.cuda.manual_seed(SEED)  # 为当前GPU设置随机种子
-torch.cuda.manual_seed_all(SEED)  # 为所有GPU设置随机种子
-torch.manual_seed(SEED)
-random.seed(SEED)
-np.random.seed(SEED)
-
-torch.backends.cudnn.enabled = True  # 默认值
-torch.backends.cudnn.benchmark = True  # 默认为False
-torch.backends.cudnn.deterministic = True  # 默认为False;benchmark为True时,y要排除随机性必须为True
-
-
-torch.autograd.set_detect_anomaly(True)
-
 SHOW_COMP_GRAPH = False
 
 
@@ -113,6 +111,8 @@ def train(
         mode="val",
         is_distributed=distributed,
     )
+
+    test_data_loaders = make_data_loader(cfg, mode="test", is_distributed=distributed)
 
     debug_print(logger, "end dataloader")
 
@@ -240,7 +240,7 @@ def train(
         if cfg.MODEL.ROI_RELATION_HEAD.BGNN_MODULE.RELATION_CONFIDENCE_AWARE:
             slow_heads = [
                 "roi_heads.relation.predictor.context_layer.relation_conf_aware_models",
-            ]        
+            ]
 
     except_weight_decay = []
     if cfg.MODEL.ROI_RELATION_HEAD.PREDICTOR == "BGNN_MODULE":
@@ -277,10 +277,10 @@ def train(
         ] = "roi_heads.attribute.feature_extractor"
 
     print("load model to GPU")
-    device = torch.device(cfg.MODEL.DEVICE)
-    model.to(device)
+    device = torch_device(cfg.MODEL.DEVICE)
+    model.to(device, non_blocking=True)
 
-    num_gpus = int(os.environ["WORLD_SIZE"]) if "WORLD_SIZE" in os.environ else 1
+    # num_gpus = int(os.environ["WORLD_SIZE"]) if "WORLD_SIZE" in os.environ else 1
     num_batch = cfg.SOLVER.IMS_PER_BATCH
     optimizer = make_optimizer(
         cfg,
@@ -321,10 +321,10 @@ def train(
         model.roi_heads.relation.predictor.init_classifier_weight()
 
     # preserve a reference for logging
-    rel_model_ref = model.roi_heads.relation
+    # rel_model_ref = model.roi_heads.relation
 
     if distributed:
-        model = torch.nn.parallel.DistributedDataParallel(
+        model = DistributedDataParallel(
             model,
             device_ids=[local_rank],
             output_device=local_rank,
@@ -377,7 +377,7 @@ def train(
         model.train()
         fix_eval_modules(eval_modules)
 
-        images = images.to(device)
+        images = images.to(device, non_blocking=True)
         targets = [target.to(device) for target in targets]
 
         loss_dict = model(images, targets, logger=logger)
@@ -479,7 +479,7 @@ def train(
                     meters=str(meters),
                     lr=optimizer.param_groups[0]["lr"],
                     max_iter=max_iter,
-                    memory=torch.cuda.max_memory_allocated() / 1024.0 / 1024.0,
+                    memory=max_memory_allocated() / 1048576,
                 )
             )
             if pre_clser_pretrain_on:
@@ -488,17 +488,20 @@ def train(
         if iteration % checkpoint_period == 0:
             checkpointer.save("model_{:07d}".format(iteration), **arguments)
         if iteration == max_iter:
-            checkpointer.save("model_final", **arguments)
+            checkpointer.save("model_{:07d}_final", **arguments)
 
         val_result_value = None  # used for scheduler updating
         if cfg.SOLVER.TO_VAL and iteration % cfg.SOLVER.VAL_PERIOD == 0:
-            logger.info("Start validating")
+            logger.info(f"Start validating at iteration={iteration}.")
             val_result = run_val(cfg, model, val_data_loaders, distributed, logger)
             val_result_value = val_result[1]
             if get_rank() == 0:
                 for each_ds_eval in val_result[0]:
                     for each_evalator_res in each_ds_eval[1]:
                         logger.log(TFBoardHandler_LEVEL, (each_evalator_res, iteration))
+            logger.info(f"Finished validating at iteration={iteration}. val_result={val_result}")
+            test_result = run_test(cfg, model, test_data_loaders, distributed, logger)
+            logger.info(f"Finished testing at iteration={iteration}. test_result={test_result}")
         # scheduler should be called after optimizer.step() in pytorch>=1.1.0
         # https://pytorch.org/docs/stable/optim.html#how-to-adjust-learning-rate
         if cfg.SOLVER.SCHEDULE.TYPE == "WarmupReduceLROnPlateau":
@@ -573,9 +576,9 @@ def run_val(cfg, model, val_data_loaders, distributed, logger):
             val_values.append(each[0])
     # support for multi gpu distributed testing
     # send evaluation results to each process
-    gathered_result = all_gather(torch.tensor(val_values).cpu())
+    gathered_result = all_gather(torch_tensor(val_values).cpu())
     gathered_result = [t.view(-1) for t in gathered_result]
-    gathered_result = torch.cat(gathered_result, dim=-1).view(-1)
+    gathered_result = torch_cat(gathered_result, dim=-1).view(-1)
     valid_result = gathered_result[gathered_result >= 0]
     val_result_val = float(valid_result.mean())
 
@@ -583,7 +586,7 @@ def run_val(cfg, model, val_data_loaders, distributed, logger):
     return val_result, val_result_val
 
 
-def run_test(cfg, model, distributed, logger):
+def run_test(cfg, model, data_loaders_test, distributed, logger):
     if distributed:
         model = model.module
     iou_types = ("bbox",)
@@ -602,11 +605,12 @@ def run_test(cfg, model, distributed, logger):
             output_folder = os.path.join(cfg.OUTPUT_DIR, "inference", dataset_name)
             mkdir(output_folder)
             output_folders[idx] = output_folder
-    data_loaders_val = make_data_loader(cfg, mode="test", is_distributed=distributed)
+
+    val_result = []
     for output_folder, dataset_name, data_loader_val in zip(
-        output_folders, dataset_names, data_loaders_val
+        output_folders, dataset_names, data_loaders_test
     ):
-        inference(
+        dataset_result = inference(
             cfg,
             model,
             data_loader_val,
@@ -620,9 +624,33 @@ def run_test(cfg, model, distributed, logger):
             logger=logger,
         )
         synchronize()
+        val_result.append(dataset_result)
+
+    val_values = []
+    for each in val_result:
+        if isinstance(each, tuple):
+            val_values.append(each[0])
+    # support for multi gpu distributed testing
+    # send evaluation results to each process
+    gathered_result = all_gather(torch_tensor(val_values).cpu())
+    gathered_result = [t.view(-1) for t in gathered_result]
+    gathered_result = torch_cat(gathered_result, dim=-1).view(-1)
+    valid_result = gathered_result[gathered_result >= 0]
+    val_result_val = float(valid_result.mean())
+
+    del gathered_result, valid_result
+    return val_result, val_result_val
 
 
 def main():
+    seed(SEED)
+
+    cudnn.enabled = True  # 默认值
+    cudnn.benchmark = True  # 默认为False
+    cudnn.deterministic = True  # 默认为False;benchmark为True时,y要排除随机性必须为True
+
+    set_detect_anomaly(True)
+
     parser = argparse.ArgumentParser(description="PyTorch Relation Detection Training")
     parser.add_argument(
         "--config-file",
@@ -651,8 +679,8 @@ def main():
     args.distributed = num_gpus > 1
 
     if args.distributed:
-        torch.cuda.set_device(args.local_rank)
-        torch.distributed.init_process_group(backend="nccl", init_method="env://")
+        set_device(args.local_rank)
+        init_process_group(backend="nccl", init_method="env://")
         synchronize()
 
     cfg.merge_from_file(args.config_file)
@@ -705,7 +733,7 @@ def main():
     model = train(cfg, args.local_rank, args.distributed, logger)
 
     if not args.skip_test:
-        run_test(cfg, model, args.distributed, logger)
+        run_test(cfg, model, test_data_loaders, args.distributed, logger)
 
 
 if __name__ == "__main__":

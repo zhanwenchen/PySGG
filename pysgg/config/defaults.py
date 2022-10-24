@@ -304,6 +304,16 @@ _C.MODEL.ROI_RELATION_HEAD.CONTEXT_REL_LAYER = 1  # assert >= 1
 _C.MODEL.ROI_RELATION_HEAD.EVALUATE_REL_PROPOSAL = True
 
 _C.MODEL.ROI_RELATION_HEAD.TRANSFORMER = CN()
+_C.MODEL.ROI_RELATION_HEAD.PAIRWISE = CN()
+_C.MODEL.ROI_RELATION_HEAD.PAIRWISE.DETACH = False
+_C.MODEL.ROI_RELATION_HEAD.PAIRWISE.USING_EXPLICIT_PAIRWISE = True
+_C.MODEL.ROI_RELATION_HEAD.PAIRWISE.EXPLICIT_PAIRWISE_DATA = ''
+_C.MODEL.ROI_RELATION_HEAD.PAIRWISE.EXPLICIT_PAIRWISE_FUNC = ''
+
+_C.MODEL.ROI_RELATION_HEAD.PAIRWISE.MHA = CN()
+_C.MODEL.ROI_RELATION_HEAD.PAIRWISE.MHA.NUM_HEAD = 8
+_C.MODEL.ROI_RELATION_HEAD.PAIRWISE.MHA.NUM_LAYERS = 2
+
 # for TransformerPredictor only
 _C.MODEL.ROI_RELATION_HEAD.TRANSFORMER.DROPOUT_RATE = 0.1
 _C.MODEL.ROI_RELATION_HEAD.TRANSFORMER.OBJ_LAYER = 4
@@ -319,7 +329,7 @@ _C.MODEL.ROI_RELATION_HEAD.PREDICT_USE_BIAS = True
 _C.MODEL.ROI_RELATION_HEAD.REQUIRE_BOX_OVERLAP = True
 _C.MODEL.ROI_RELATION_HEAD.NUM_SAMPLE_PER_GT_REL = 4  # when sample fg relationship from gt, the max number of corresponding proposal pairs
 
-# in sgdet, to make sure the detector won't missing any ground truth bbox, 
+# in sgdet, to make sure the detector won't missing any ground truth bbox,
 # we add grount truth box to the output of RPN proposals during Training
 _C.MODEL.ROI_RELATION_HEAD.ADD_GTBOX_TO_PROPOSAL_IN_TRAIN = False
 
@@ -357,7 +367,7 @@ _C.MODEL.ROI_RELATION_HEAD.MSDN_MODULE.SHARE_PARAMETERS_EACH_ITER=True
 
 _C.MODEL.ROI_RELATION_HEAD.MSDN_MODULE.GRAPH_ITERATION_NUM = 3
 
-_C.MODEL.ROI_RELATION_HEAD.MSDN_MODULE.EDGE_FEATURES_REPRESENTATION = "union"  # obj_pair, 
+_C.MODEL.ROI_RELATION_HEAD.MSDN_MODULE.EDGE_FEATURES_REPRESENTATION = "union"  # obj_pair,
 # the feature representation for the relationship feature, can be the union features, instance pair features and thire fused features
 
 _C.MODEL.ROI_RELATION_HEAD.MSDN_MODULE.APPLY_GT = False
@@ -373,7 +383,7 @@ _C.MODEL.ROI_RELATION_HEAD.BGNN_MODULE.SHARE_PARAMETERS_EACH_ITER=True
 
 _C.MODEL.ROI_RELATION_HEAD.BGNN_MODULE.GRAPH_ITERATION_NUM = 3
 
-_C.MODEL.ROI_RELATION_HEAD.BGNN_MODULE.EDGE_FEATURES_REPRESENTATION = "union"  # obj_pair, 
+_C.MODEL.ROI_RELATION_HEAD.BGNN_MODULE.EDGE_FEATURES_REPRESENTATION = "union"  # obj_pair,
 # the feature representation for the relationship feature, can be the union features, instance pair features and thire fused features
 
 _C.MODEL.ROI_RELATION_HEAD.BGNN_MODULE.RELATION_CONFIDENCE_AWARE = False
@@ -419,7 +429,7 @@ _C.MODEL.ROI_RELATION_HEAD.GPSNET_MODULE.RELNESS_MP_WEIGHTING = False
 
 _C.MODEL.ROI_RELATION_HEAD.GPSNET_MODULE.GRAPH_HIDDEN_DIM = 512
 
-##### CVPR 2018 AGRCNN 
+##### CVPR 2018 AGRCNN
 _C.MODEL.ROI_RELATION_HEAD.GRCNN_MODULE = CN()
 
 _C.MODEL.ROI_RELATION_HEAD.GRCNN_MODULE.FEATURE_UPDATE_STEP = 2
@@ -458,7 +468,7 @@ _C.MODEL.ROI_RELATION_HEAD.RELATION_PROPOSAL_MODEL.METHOD = "gt" # rel proposal 
 
 _C.MODEL.ROI_RELATION_HEAD.RELATION_PROPOSAL_MODEL.PRE_CLSER_LOSS = 'bce' #focal, bce, ce
 
-_C.MODEL.ROI_RELATION_HEAD.RELATION_PROPOSAL_MODEL.REL_AWARE_PREDICTOR_TYPE = "single" # "hybrid  
+_C.MODEL.ROI_RELATION_HEAD.RELATION_PROPOSAL_MODEL.REL_AWARE_PREDICTOR_TYPE = "single" # "hybrid
 
 _C.MODEL.ROI_RELATION_HEAD.RELATION_PROPOSAL_MODEL.FIX_MODEL_AT_ITER = -1
 
@@ -469,7 +479,7 @@ _C.MODEL.ROI_RELATION_HEAD.RELATION_PROPOSAL_MODEL.PAIR_NUMS_AFTER_FILTERING = -
 
 _C.MODEL.ROI_RELATION_HEAD.RELATION_PROPOSAL_MODEL.IGNORE_FOREGROUND_BOXES_PAIRS = False
 # the rel pn take the geometery and sematics information in default, but we can take the visual features of instances
-_C.MODEL.ROI_RELATION_HEAD.RELATION_PROPOSAL_MODEL.VISUAL_FEATURES_ON = True # we will take the visual features in default 
+_C.MODEL.ROI_RELATION_HEAD.RELATION_PROPOSAL_MODEL.VISUAL_FEATURES_ON = True # we will take the visual features in default
 # the relationness score can be use for the ranking in final prediction, in default we will set is as false for better performances
 _C.MODEL.ROI_RELATION_HEAD.RELATION_PROPOSAL_MODEL.USE_RELATEDNESS_FOR_PREDICTION_RANKING = False
 
@@ -742,7 +752,7 @@ _C.SOLVER.VAL_PERIOD = 2500
 
 # update schedule
 # when load from a previous model, if set to True
-# only maintain the iteration number and all the other settings of the 
+# only maintain the iteration number and all the other settings of the
 # schedule will be changed
 _C.SOLVER.UPDATE_SCHEDULE_DURING_LOAD = False
 
