@@ -67,7 +67,7 @@ else
   export MAX_ITER=50000
   export LR=1e-3
   export USE_GSC_FE=False
-  export SINGULARITYENV_PREPEND_PATH="${HOME}/.conda/envs/gsc_docker/bin:/opt/conda/condabin"
+  export SINGULARITYENV_PREPEND_PATH="${HOME}/.conda/envs/pysgg/bin:/opt/conda/condabin"
   # export CONFIG_FILE=configs/e2e_relation_X_101_32_8_FPN_1x_pairwise.yaml
   export NUM_GPUS=$(nvidia-smi --query-gpu=name --format=csv,noheader | wc -l)
   export DATA_DIR_VG_RCNN=/project/sds-rise/zhanwen/datasets
@@ -77,5 +77,5 @@ else
   export EXPLICIT_PAIRWISE_DATA='hadamard'
   export EXPLICIT_PAIRWISE_FUNC='mha'
 
-  singularity exec --nv --env LD_LIBRARY_PATH="\$LD_LIBRARY_PATH:${HOME}/.conda/envs/gsc_docker/lib" docker://pytorch/pytorch:1.12.1-cuda11.3-cudnn8-devel ${PROJECT_DIR}/scripts/rel_train_BGNN_vg.sh
+  singularity exec --nv --env LD_LIBRARY_PATH="\$LD_LIBRARY_PATH:${HOME}/.conda/envs/pysgg/lib" docker://pytorch/pytorch:1.12.1-cuda11.3-cudnn8-devel ${PROJECT_DIR}/scripts/rel_train_BGNN_vg.sh
 fi
