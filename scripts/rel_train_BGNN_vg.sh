@@ -39,7 +39,7 @@ python -m torch.distributed.launch --master_port 10028 --nproc_per_node=$NUM_GPU
        MODEL.ROI_RELATION_HEAD.USE_GT_BOX True \
        MODEL.ROI_RELATION_HEAD.USE_GT_OBJECT_LABEL True \
        MODEL.ROI_RELATION_HEAD.DATA_RESAMPLING_PARAM.REPEAT_FACTOR 0.13 \
-       MODEL.ROI_RELATION_HEAD.DATA_RESAMPLING_PARAM.INSTANCE_DROP_RATE 1.6 \
+       MODEL.ROI`_RELATION_HEAD.DATA_RESAMPLING_PARAM.INSTANCE_DROP_RATE 1.6 \
        EXPERIMENT_NAME "$MODEL_NAME" \
        SOLVER.IMS_PER_BATCH $[$BATCH_SIZE*$NUM_GPUS] \
        SOLVER.PRE_VAL True \
@@ -49,7 +49,7 @@ python -m torch.distributed.launch --master_port 10028 --nproc_per_node=$NUM_GPU
        MODEL.ROI_RELATION_HEAD.PAIRWISE.EXPLICIT_PAIRWISE_DATA 'hadamard' \
        MODEL.ROI_RELATION_HEAD.PAIRWISE.EXPLICIT_PAIRWISE_FUNC 'mha' \
        MODEL.ROI_RELATION_HEAD.USE_GT_BOX ${USE_GT_BOX} \
-       MODEL.ROI_RELATION_HEAD.USE_GT_OBJECT_LABEL ${USE_GT_OBJECT_LABEL}
+       MODEL.ROI_RELATION_HEAD.USE_GT_OBJECT_LABEL ${USE_GT_OBJECT_LABEL} 2>&1 | tee ${MODEL_DIRNAME}/log_train.log &&
 
        # MODEL.PRETRAINED_DETECTOR_CKPT checkpoints/detection/pretrained_faster_rcnn/model_final.pth \
 echo "Finished training PredCls model ${MODEL_NAME}" || echo "Failed to train PredCls model ${MODEL_NAME}"
