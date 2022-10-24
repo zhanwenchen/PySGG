@@ -60,5 +60,9 @@ else
   export NUM_GPUS=$(echo $CUDA_VISIBLE_DEVICES | tr -cd , | wc -c); ((NUM_GPUS++))
   export USE_GT_BOX=True
   export USE_GT_OBJECT_LABEL=True
+  export USING_EXPLICIT_PAIRWISE=True
+  export EXPLICIT_PAIRWISE_DATA='hadamard'
+  export EXPLICIT_PAIRWISE_FUNC='mha'
+  
   ${PROJECT_DIR}/scripts/rel_train_BGNN_vg.sh
 fi

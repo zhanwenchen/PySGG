@@ -73,6 +73,9 @@ else
   export DATA_DIR_VG_RCNN=/project/sds-rise/zhanwen/datasets
   export USE_GT_BOX=True
   export USE_GT_OBJECT_LABEL=True
+  export USING_EXPLICIT_PAIRWISE=True
+  export EXPLICIT_PAIRWISE_DATA='hadamard'
+  export EXPLICIT_PAIRWISE_FUNC='mha'
 
   singularity exec --nv --env LD_LIBRARY_PATH="\$LD_LIBRARY_PATH:${HOME}/.conda/envs/pysgg/lib" docker://pytorch/pytorch:1.12.1-cuda11.3-cudnn8-devel ${PROJECT_DIR}/scripts/rel_train_BGNN_vg.sh
 fi
