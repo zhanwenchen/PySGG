@@ -10,6 +10,7 @@ import datetime
 import os
 import random
 import time
+from pprint import pformat
 import numpy as np
 from torch import (
     cat as torch_cat,
@@ -499,10 +500,13 @@ def train(
                 for each_ds_eval in val_result[0]:
                     for each_evalator_res in each_ds_eval[1]:
                         logger.log(TFBoardHandler_LEVEL, (each_evalator_res, iteration))
-            logger.info(f"Finished validating at iteration={iteration}. val_result={val_result}")
-            logger.info(f"Started validating at iteration={iteration}.")
-            test_result = run_test(cfg, model, test_data_loaders, distributed, logger)
-            logger.info(f"Finished testing at iteration={iteration}. test_result={test_result}")
+            logger.info(f"Finished validating at iteration={iteration}. val_result={pformat(val_result)}")
+            try:
+                logger.info(f"Started testing at iteration={iteration}.")
+                test_result = run_test(cfg, model, test_data_loaders, distributed, logger)
+                logger.info(f"Finished testing at iteration={iteration}. test_result={pformat(test_result)}")
+            except Exception as e:
+                logger.info(f"Failed testing at iteration={iteration}. e={e}")
         # scheduler should be called after optimizer.step() in pytorch>=1.1.0
         # https://pytorch.org/docs/stable/optim.html#how-to-adjust-learning-rate
         if cfg.SOLVER.SCHEDULE.TYPE == "WarmupReduceLROnPlateau":
