@@ -19,7 +19,7 @@ export PORT=$(comm -23 <(seq 49152 65535 | sort) <(ss -Htan | awk '{print $4}' |
 export TORCHELASTIC_MAX_RESTARTS=0
 echo "TRAINING PredCls model ${MODEL_NAME}"
 cd ${PROJECT_DIR}
-MODEL_DIRNAME=${PROJECT_DIR}/checkpoints/${MODEL_NAME}/
+export MODEL_DIRNAME=${PROJECT_DIR}/checkpoints/${MODEL_NAME}/
 if [ -d "$MODEL_DIRNAME" ]; then
   error_exit "Aborted: ${MODEL_DIRNAME} exists." 2>&1 | tee -a ${LOGDIR}/${SLURM_JOB_NAME}_${SLURM_JOB_ID}.out
 fi
