@@ -15,6 +15,7 @@ error_exit()
     echo "$(timestamp) ERROR ${PROGNAME}: Exiting Early."
     exit 1
 }
+export PORT=$(comm -23 <(seq 49152 65535 | sort) <(ss -Htan | awk '{print $4}' | cut -d':' -f2 | sort -u) | shuf | head -n 1)
 export TORCHELASTIC_MAX_RESTARTS=0
 echo "TRAINING PredCls model ${MODEL_NAME}"
 cd ${PROJECT_DIR}
@@ -32,7 +33,7 @@ cp -r ${PROJECT_DIR}/pysgg/ ${MODEL_DIRNAME} &&
 export OMP_NUM_THREADS=1
 
 
-python -m torch.distributed.launch --master_port 10028 --nproc_per_node=$NUM_GPUS \
+python -m torch.distributed.launch --master_port ${PORT} --nproc_per_node=$NUM_GPUS \
        tools/relation_train_net.py \
        --config-file "configs/e2e_relBGNN_vg.yaml" \
        DEBUG False\
@@ -51,6 +52,4 @@ python -m torch.distributed.launch --master_port 10028 --nproc_per_node=$NUM_GPU
        MODEL.ROI_RELATION_HEAD.PAIRWISE.EXPLICIT_PAIRWISE_FUNC ${EXPLICIT_PAIRWISE_FUNC} \
        MODEL.ROI_RELATION_HEAD.USE_GT_BOX ${USE_GT_BOX} \
        MODEL.ROI_RELATION_HEAD.USE_GT_OBJECT_LABEL ${USE_GT_OBJECT_LABEL} 2>&1 | tee ${MODEL_DIRNAME}/log_train.log &&
-
-       # MODEL.PRETRAINED_DETECTOR_CKPT checkpoints/detection/pretrained_faster_rcnn/model_final.pth \
 echo "Finished training PredCls model ${MODEL_NAME}" || echo "Failed to train PredCls model ${MODEL_NAME}"
