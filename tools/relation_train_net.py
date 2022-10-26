@@ -500,6 +500,7 @@ def train(
                     for each_evalator_res in each_ds_eval[1]:
                         logger.log(TFBoardHandler_LEVEL, (each_evalator_res, iteration))
             logger.info(f"Finished validating at iteration={iteration}. val_result={val_result}")
+            logger.info(f"Started validating at iteration={iteration}.")
             test_result = run_test(cfg, model, test_data_loaders, distributed, logger)
             logger.info(f"Finished testing at iteration={iteration}. test_result={test_result}")
         # scheduler should be called after optimizer.step() in pytorch>=1.1.0
@@ -519,6 +520,10 @@ def train(
             total_time_str, total_training_time / (max_iter)
         )
     )
+
+    logger.info(f"Started final validating at iteration={iteration}.")
+    test_result = run_test(cfg, model, test_data_loaders, distributed, logger)
+    logger.info(f"Finished final testing at iteration={iteration}. test_result={test_result}")
     return model
 
 
@@ -695,15 +700,12 @@ def main():
     else:
         mode = "sgdet"
 
-    now = datetime.datetime.now()
-    time_str = now.strftime("%Y-%m-%d_%H")
-
     cfg.OUTPUT_DIR = os.path.join(
         cfg.OUTPUT_DIR,
         f"{mode}-{cfg.MODEL.ROI_RELATION_HEAD.PREDICTOR}",
-        f"({time_str}){cfg.EXPERIMENT_NAME}"
-        + f"{'(resampling)' if cfg.MODEL.ROI_RELATION_HEAD.DATA_RESAMPLING else ''}"
-        + f"{'(debug)' if cfg.DEBUG else ''}",
+        f"{cfg.EXPERIMENT_NAME}"
+        + f"{'_resampling)' if cfg.MODEL.ROI_RELATION_HEAD.DATA_RESAMPLING else ''}"
+        + f"{'_debug)' if cfg.DEBUG else ''}",
     )
 
     cfg.freeze()
@@ -730,10 +732,10 @@ def main():
     # save overloaded model config in the output directory
     save_config(cfg, output_config_path)
 
-    model = train(cfg, args.local_rank, args.distributed, logger)
+    train(cfg, args.local_rank, args.distributed, logger)
 
-    if not args.skip_test:
-        run_test(cfg, model, test_data_loaders, args.distributed, logger)
+    # if not args.skip_test:
+    #     run_test(cfg, model, test_data_loaders, args.distributed, logger)
 
 
 if __name__ == "__main__":
