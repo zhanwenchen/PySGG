@@ -692,21 +692,15 @@ def main():
     cfg.merge_from_list(args.opts)
 
     # mode
-    if cfg.MODEL.ROI_RELATION_HEAD.USE_GT_BOX:
-        if cfg.MODEL.ROI_RELATION_HEAD.USE_GT_OBJECT_LABEL:
-            mode = "predcls"
-        else:
-            mode = "sgcls"
-    else:
-        mode = "sgdet"
+    # if cfg.MODEL.ROI_RELATION_HEAD.USE_GT_BOX:
+    #     if cfg.MODEL.ROI_RELATION_HEAD.USE_GT_OBJECT_LABEL:
+    #         mode = "predcls"
+    #     else:
+    #         mode = "sgcls"
+    # else:
+    #     mode = "sgdet"
 
-    cfg.OUTPUT_DIR = os.path.join(
-        cfg.OUTPUT_DIR,
-        f"{mode}-{cfg.MODEL.ROI_RELATION_HEAD.PREDICTOR}",
-        f"{cfg.EXPERIMENT_NAME}"
-        + f"{'_resampling)' if cfg.MODEL.ROI_RELATION_HEAD.DATA_RESAMPLING else ''}"
-        + f"{'_debug)' if cfg.DEBUG else ''}",
-    )
+    cfg.OUTPUT_DIR = os.environ['MODEL_DIRNAME']
 
     cfg.freeze()
 
