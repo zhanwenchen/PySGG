@@ -5,9 +5,9 @@
 #SBATCH --gres=gpu:a100:4
 #SBATCH --ntasks-per-node=4 # need to match number of gpus
 #SBATCH -t 48:00:00
-#SBATCH --cpus-per-task=8
-#SBATCH --mem=128GB # need to match batch size.
-#SBATCH -J pairwise_hadamard_mha_4GPU_riv_1_sggen # TODO: CHANGE THIS
+#SBATCH --cpus-per-task=4
+#SBATCH --mem=100GB# need to match batch size.
+#SBATCH -J bgnn_pairwise_hadamard_mha_4GPU_riv_1_sggen# TODO: CHANGE THIS
 #SBATCH -o /home/pct4et/pysgg/log/%x-%A.out
 #SBATCH -e /home/pct4et/pysgg/log/%x-%A.err
 #SBATCH --mail-type=ALL
@@ -63,7 +63,7 @@ else
   module load singularity
 
   export SEED=1234
-  export BATCH_SIZE=32
+  export BATCH_SIZE=24
   export MAX_ITER=50000
   export LR=1e-3
   export USE_GSC_FE=False
