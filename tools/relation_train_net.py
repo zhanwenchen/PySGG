@@ -95,6 +95,18 @@ def train(
 ):
     global SHOW_COMP_GRAPH
 
+    mode = None
+    use_gt_box = cfg.MODEL.ROI_RELATION_HEAD.USE_GT_BOX
+    use_gt_object_label = cfg.MODEL.ROI_RELATION_HEAD.USE_GT_OBJECT_LABEL
+    if use_gt_box is True and use_gt_object_label is True:
+        mode = 'predcls'
+    if use_gt_box is True and use_gt_object_label is False:
+        mode = 'sgcls'
+    if use_gt_box is False and use_gt_object_label is False:
+        mode = 'sgdet'
+    if mode is None:
+        raise ValueError(f'mode is None given use_gt_box={use_gt_box} and use_gt_object_label={use_gt_object_label}')
+
     debug_print(logger, "Start initializing dataset & dataloader")
 
     arguments = {}
@@ -501,12 +513,12 @@ def train(
                     for each_evalator_res in each_ds_eval[1]:
                         logger.log(TFBoardHandler_LEVEL, (each_evalator_res, iteration))
             logger.info(f"Finished validating at iteration={iteration}. val_result={pformat(val_result)}")
-            try:
+            if mode == 'sgdet':
                 logger.info(f"Started testing at iteration={iteration}.")
                 test_result = run_test(cfg, model, test_data_loaders, distributed, logger)
                 logger.info(f"Finished testing at iteration={iteration}. test_result={pformat(test_result)}")
-            except Exception as e:
-                logger.info(f"Failed testing at iteration={iteration}. e={e}")
+            else:
+                logger.info(f"Skip testing for sgdet at iteration={iteration}.")
         # scheduler should be called after optimizer.step() in pytorch>=1.1.0
         # https://pytorch.org/docs/stable/optim.html#how-to-adjust-learning-rate
         if cfg.SOLVER.SCHEDULE.TYPE == "WarmupReduceLROnPlateau":
