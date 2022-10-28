@@ -513,7 +513,7 @@ def train(
                     for each_evalator_res in each_ds_eval[1]:
                         logger.log(TFBoardHandler_LEVEL, (each_evalator_res, iteration))
             logger.info(f"Finished validating at iteration={iteration}. val_result={pformat(val_result)}")
-            if mode == 'sgdet':
+            if mode != 'sgdet':
                 logger.info(f"Started testing at iteration={iteration}.")
                 test_result = run_test(cfg, model, test_data_loaders, distributed, logger)
                 logger.info(f"Finished testing at iteration={iteration}. test_result={pformat(test_result)}")
