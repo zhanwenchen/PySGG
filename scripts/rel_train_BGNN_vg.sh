@@ -44,6 +44,7 @@ python -m torch.distributed.launch --master_port ${PORT} --nproc_per_node=$NUM_G
        EXPERIMENT_NAME "$MODEL_NAME" \
        SOLVER.IMS_PER_BATCH $[$BATCH_SIZE*$NUM_GPUS] \
        SOLVER.PRE_VAL True \
+       SOLVER.BASE_LR ${LR} \
        TEST.IMS_PER_BATCH ${NUM_GPUS} \
        SOLVER.VAL_PERIOD 2000 \
        SOLVER.CHECKPOINT_PERIOD 2000 \
