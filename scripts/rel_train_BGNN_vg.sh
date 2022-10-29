@@ -17,7 +17,22 @@ error_exit()
 }
 export PORT=$(comm -23 <(seq 49152 65535 | sort) <(ss -Htan | awk '{print $4}' | cut -d':' -f2 | sort -u) | shuf | head -n 1)
 export TORCHELASTIC_MAX_RESTARTS=0
-echo "TRAINING PredCls model ${MODEL_NAME}"
+
+get_mode()
+{
+  if [[ ${USE_GT_BOX} == "True" ]] && [[ ${USE_GT_OBJECT_LABEL} == "True" ]]; then
+    export MODE="predcls"
+  elif [[ ${USE_GT_BOX} == "True" ]] && [[ ${USE_GT_OBJECT_LABEL} == "False" ]]; then
+    export MODE="sgcls"
+  elif [[ ${USE_GT_BOX} == "False" ]] && [[ ${USE_GT_OBJECT_LABEL} == "False" ]]; then
+    export MODE="sgdet"
+  else
+    error_exit "Illegal USE_GT_BOX=${USE_GT_BOX} and USE_GT_OBJECT_LABEL=${USE_GT_OBJECT_LABEL} provided."
+  fi
+}
+
+export MODE=$(get_mode)
+echo "TRAINING ${MODE} model ${MODEL_NAME}"
 cd ${PROJECT_DIR}
 export MODEL_DIRNAME=${PROJECT_DIR}/checkpoints/${MODEL_NAME}/
 if [ -d "$MODEL_DIRNAME" ]; then
@@ -48,9 +63,6 @@ python -m torch.distributed.launch --master_port ${PORT} --nproc_per_node=$NUM_G
        TEST.IMS_PER_BATCH ${NUM_GPUS} \
        SOLVER.VAL_PERIOD 2000 \
        SOLVER.CHECKPOINT_PERIOD 2000 \
-       MODEL.ROI_RELATION_HEAD.PAIRWISE.USING_EXPLICIT_PAIRWISE ${USING_EXPLICIT_PAIRWISE} \
-       MODEL.ROI_RELATION_HEAD.PAIRWISE.EXPLICIT_PAIRWISE_DATA ${EXPLICIT_PAIRWISE_DATA} \
-       MODEL.ROI_RELATION_HEAD.PAIRWISE.EXPLICIT_PAIRWISE_FUNC ${EXPLICIT_PAIRWISE_FUNC} \
        MODEL.ROI_RELATION_HEAD.USE_GT_BOX ${USE_GT_BOX} \
        MODEL.ROI_RELATION_HEAD.USE_GT_OBJECT_LABEL ${USE_GT_OBJECT_LABEL} 2>&1 | tee ${MODEL_DIRNAME}/log_train.log &&
-echo "Finished training PredCls model ${MODEL_NAME}" || echo "Failed to train PredCls model ${MODEL_NAME}"
+echo "Finished training ${MODE} model ${MODEL_NAME}" || echo "Failed to train ${MODE} model ${MODEL_NAME}"
