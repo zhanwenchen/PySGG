@@ -30,7 +30,7 @@ if [ -d "$MODEL_DIRNAME" ]; then
 else
   export CUDA_VISIBLE_DEVICES=0
   export SEED=1234
-  export BATCH_SIZE=3
+  export BATCH_SIZE=12
   export MAX_ITER=50000
   export LR=8e-3
   export DATA_DIR_VG_RCNN=${HOME}/datasets
