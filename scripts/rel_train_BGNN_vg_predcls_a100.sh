@@ -15,7 +15,7 @@
 #SBACTH --exclude=udc-an28-1,udc-an28-7
 
 timestamp() {
-  date +"%Y-%m-%d %T"
+  date +"%Y%m%d%H%M%S"
 }
 
 error_exit()
@@ -65,7 +65,7 @@ else
   export SEED=1234
   export BATCH_SIZE=24
   export MAX_ITER=50000
-  export LR=5e-4
+  export LR=8e-4
   export PRE_VAL=False
   export USE_GSC_FE=False
   export SINGULARITYENV_PREPEND_PATH="${HOME}/.conda/envs/pysgg/bin:/opt/conda/condabin"

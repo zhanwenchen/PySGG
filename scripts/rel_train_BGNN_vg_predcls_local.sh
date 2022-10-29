@@ -1,6 +1,6 @@
 #!/bin/bash
 timestamp() {
-  date +"%Y%m%d%T"
+  date +"%Y%m%d%H%M%S"
 }
 
 SLURM_JOB_NAME=pairwise_predcls_1GPU_legion_dev

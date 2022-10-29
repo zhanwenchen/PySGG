@@ -1,6 +1,6 @@
 #!/bin/bash
 timestamp() {
-  date +"%Y-%m-%d %T"
+  date +"%Y%m%d%H%M%S"
 }
 
 error_exit()
