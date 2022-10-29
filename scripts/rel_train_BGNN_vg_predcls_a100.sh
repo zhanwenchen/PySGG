@@ -66,6 +66,7 @@ else
   export BATCH_SIZE=24
   export MAX_ITER=50000
   export LR=5e-4
+  export PRE_VAL=False
   export USE_GSC_FE=False
   export SINGULARITYENV_PREPEND_PATH="${HOME}/.conda/envs/pysgg/bin:/opt/conda/condabin"
   # export CONFIG_FILE=configs/e2e_relation_X_101_32_8_FPN_1x_pairwise.yaml

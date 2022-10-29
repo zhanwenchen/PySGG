@@ -58,7 +58,7 @@ python -m torch.distributed.launch --master_port ${PORT} --nproc_per_node=$NUM_G
        MODEL.ROI_RELATION_HEAD.DATA_RESAMPLING_PARAM.INSTANCE_DROP_RATE 1.6 \
        EXPERIMENT_NAME "$MODEL_NAME" \
        SOLVER.IMS_PER_BATCH $[$BATCH_SIZE*$NUM_GPUS] \
-       SOLVER.PRE_VAL True \
+       SOLVER.PRE_VAL ${PRE_VAL} \
        SOLVER.BASE_LR ${LR} \
        TEST.IMS_PER_BATCH ${NUM_GPUS} \
        SOLVER.VAL_PERIOD 2000 \
