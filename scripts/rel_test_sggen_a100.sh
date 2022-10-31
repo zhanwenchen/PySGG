@@ -68,6 +68,7 @@ else
   export DATA_DIR_VG_RCNN=/project/sds-rise/zhanwen/datasets
   export USE_GT_BOX=False
   export USE_GT_OBJECT_LABEL=False
+  export PORT=$(comm -23 <(seq 49152 65535 | sort) <(ss -Htan | awk '{print $4}' | cut -d':' -f2 | sort -u) | shuf | head -n 1)
 
   singularity exec --nv --env LD_LIBRARY_PATH="\$LD_LIBRARY_PATH:${HOME}/.conda/envs/pysgg/lib" docker://pytorch/pytorch:1.12.1-cuda11.3-cudnn8-devel ${PROJECT_DIR}/scripts/rel_test.sh
 fi

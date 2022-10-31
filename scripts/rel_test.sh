@@ -53,7 +53,6 @@ export MODE=$(get_mode)
 
 IFS=- read str1 MODEL_NAME ITER <<< "${SLURM_JOB_NAME}"
 
-export PORT=$(comm -23 <(seq 49152 65535 | sort) <(ss -Htan | awk '{print $4}' | cut -d':' -f2 | sort -u) | shuf | head -n 1)
 echo "TRAINING ${MODE} model ${MODEL_NAME}"
 python -m torch.distributed.launch --master_port $PORT --nproc_per_node=$NUM_GPUS  \
   tools/relation_test_net.py \
