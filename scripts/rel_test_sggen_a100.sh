@@ -7,7 +7,7 @@
 #SBATCH -t 24:00:00
 #SBATCH --cpus-per-task=1
 #SBATCH --mem=32GB # need to match batch size.
-#SBATCH -J test-bgnn_pairwise_hadamard_mha_4GPU_riv_1_predcls-0002000 # TODO: CHANGE THIS
+#SBATCH -J test-44489302_bgnn_pairwise_hadamard_mha_4GPU_riv_1_sggen-0002000 # TODO: CHANGE THIS
 #SBATCH -o /home/pct4et/pysgg/log/%x-%A.out
 #SBATCH -e /home/pct4et/pysgg/log/%x-%A.err
 #SBATCH --mail-type=ALL
