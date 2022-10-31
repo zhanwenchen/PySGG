@@ -68,7 +68,7 @@ else
   export LR=5e-4
   export USE_GSC_FE=False
   export SINGULARITYENV_PREPEND_PATH="${HOME}/.conda/envs/pysgg/bin:/opt/conda/condabin"
-  # export CONFIG_FILE=configs/e2e_relation_X_101_32_8_FPN_1x_pairwise.yaml
+  export CONFIG_FILE=configs/e2e_relBGNN_vg_predcls.yaml
   export NUM_GPUS=$(nvidia-smi --query-gpu=name --format=csv,noheader | wc -l)
   export DATA_DIR_VG_RCNN=/project/sds-rise/zhanwen/datasets
   export USE_GT_BOX=True

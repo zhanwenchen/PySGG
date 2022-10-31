@@ -35,12 +35,10 @@ export OMP_NUM_THREADS=1
 
 python -m torch.distributed.launch --master_port ${PORT} --nproc_per_node=$NUM_GPUS \
        tools/relation_train_net.py \
-       --config-file "configs/e2e_relBGNN_vg.yaml" \
+       --config-file ${CONFIG_FILE} \
        DEBUG False\
        MODEL.ROI_RELATION_HEAD.USE_GT_BOX True \
        MODEL.ROI_RELATION_HEAD.USE_GT_OBJECT_LABEL True \
-       MODEL.ROI_RELATION_HEAD.DATA_RESAMPLING_PARAM.REPEAT_FACTOR 0.13 \
-       MODEL.ROI_RELATION_HEAD.DATA_RESAMPLING_PARAM.INSTANCE_DROP_RATE 1.6 \
        EXPERIMENT_NAME "$MODEL_NAME" \
        SOLVER.IMS_PER_BATCH $[$BATCH_SIZE*$NUM_GPUS] \
        SOLVER.PRE_VAL True \

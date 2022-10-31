@@ -55,7 +55,7 @@ else
   export LR=1e-3
   export USE_GSC=False
   export USE_GSC_FE=False
-  # export CONFIG_FILE=configs/e2e_relation_X_101_32_8_FPN_1x_pairwise.yaml
+  export CONFIG_FILE=configs/e2e_relBGNN_vg_predcls.yaml
   export DATA_DIR_VG_RCNN=${HOME}/datasets
   export NUM_GPUS=$(echo $CUDA_VISIBLE_DEVICES | tr -cd , | wc -c); ((NUM_GPUS++))
   export USE_GT_BOX=True
@@ -63,6 +63,6 @@ else
   export USING_EXPLICIT_PAIRWISE=True
   export EXPLICIT_PAIRWISE_DATA='hadamard'
   export EXPLICIT_PAIRWISE_FUNC='mha'
-  
+
   ${PROJECT_DIR}/scripts/rel_train_BGNN_vg.sh
 fi
