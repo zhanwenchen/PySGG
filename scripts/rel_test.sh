@@ -56,9 +56,9 @@ IFS=- read str1 MODEL_NAME ITER <<< "${SLURM_JOB_NAME}"
 echo "TRAINING ${MODE} model ${MODEL_NAME}"
 python -m torch.distributed.launch --master_port $PORT --nproc_per_node=$NUM_GPUS  \
   tools/relation_test_net.py \
-  --config-file "${MODEL_NAME}/config.yml"\
-  TEST.IMS_PER_BATCH $[$gpu_num] \
-  MODEL.WEIGHT  "${MODEL_NAME}/model_${ITER}.pth"\
+  --config-file "checkpoints/${MODEL_NAME}/config.yml"\
+  TEST.IMS_PER_BATCH $NUM_GPUS \
+  MODEL.WEIGHT  "checkpoints/${MODEL_NAME}/model_${ITER}.pth"\
   MODEL.ROI_RELATION_HEAD.EVALUATE_REL_PROPOSAL False \
-  DATASETS.TEST "('VG_stanford_filtered_with_attribute_test', )" 2>&1 | tee ${MODEL_DIRNAME}/log_test_${ITER}.log &&
+  DATASETS.TEST "('VG_stanford_filtered_with_attribute_test', )" 2>&1 | tee checkpoints/${MODEL_NAME}/log_test_${ITER}.log &&
 echo "Finished testing ${MODE} model ${MODEL_NAME}" || echo "Failed to test ${MODE} model ${MODEL_NAME}"
