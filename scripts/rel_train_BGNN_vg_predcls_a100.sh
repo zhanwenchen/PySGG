@@ -7,7 +7,7 @@
 #SBATCH -t 48:00:00
 #SBATCH --cpus-per-task=4
 #SBATCH --mem=100GB # need to match batch size.
-#SBATCH -J bgnn_pairwise_hadamard_mha_4GPU_riv_1_predcls # TODO: CHANGE THIS
+#SBATCH -J bgnn_pairwise_hadamard_mha_explicit_only_specific_config_4GPU_riv_1_predcls # TODO: CHANGE THIS
 #SBATCH -o /home/pct4et/pysgg/log/%x-%A.out
 #SBATCH -e /home/pct4et/pysgg/log/%x-%A.err
 #SBATCH --mail-type=ALL
@@ -65,7 +65,7 @@ else
   export SEED=1234
   export BATCH_SIZE=24
   export MAX_ITER=50000
-  export LR=5e-4
+  export LR=2e-3
   export USE_GSC_FE=False
   export SINGULARITYENV_PREPEND_PATH="${HOME}/.conda/envs/pysgg/bin:/opt/conda/condabin"
   export CONFIG_FILE=configs/e2e_relBGNN_vg_predcls.yaml
