@@ -73,7 +73,7 @@ MODEL:
   KEYPOINT_ON: false
   MASK_ON: false
   META_ARCHITECTURE: GeneralizedRCNN
-  PRETRAINED_DETECTOR_CKPT: checkpoints/detection/pretrained_faster_rcnn/model_final.pth
+  PRETRAINED_DETECTOR_CKPT: checkpoints/detection/pretrained_faster_rcnn/vg_faster_det.pth
   RELATION_ON: true
   RESNETS:
     BACKBONE_OUT_CHANNELS: 256
