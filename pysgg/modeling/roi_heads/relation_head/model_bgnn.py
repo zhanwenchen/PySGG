@@ -375,7 +375,7 @@ class BGNNContext(nn.Module):
                 )
 
             self.filter_the_mp_instance = (
-                cfg.MODEL.ROI_RELATION_HEAD.BGNN_MODULE.MP_ON_VALID_PAIRS
+                cfg.MODEL.ROI_RELATION_HEAD.BGNN_MODULE.MP_ON_VALID_PAIRS # True
             )
 
         # decrease the dimension before mp
