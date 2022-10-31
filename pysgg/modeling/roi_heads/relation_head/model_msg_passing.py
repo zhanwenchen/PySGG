@@ -326,7 +326,7 @@ class PairwiseFeatureExtractor(Module):
         rel_features = self.pairwise_rel_feat_finalize_fc(obj_pair_feat4rel_rep)
 
         if self.using_explicit_pairwise is True:
-            rel_features += self.explicit_pairwise_func(pairwise_obj_ctx)
+            return rel_features + self.explicit_pairwise_func(pairwise_obj_ctx)
             # rel_features *= self.explicit_pairwise_func(pairwise_obj_ctx)
         return rel_features  #1024=>2048 , 512 => pooling_dim
         # This is the intermediate step but not the final.
