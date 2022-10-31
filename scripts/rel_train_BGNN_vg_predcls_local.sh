@@ -52,7 +52,7 @@ else
   export SEED=1234
   export BATCH_SIZE=12
   export MAX_ITER=50000
-  export LR=1e-3
+  export LR=8e-3
   export USE_GSC=False
   export USE_GSC_FE=False
   export CONFIG_FILE=configs/e2e_relBGNN_vg_predcls.yaml
@@ -60,6 +60,7 @@ else
   export NUM_GPUS=$(echo $CUDA_VISIBLE_DEVICES | tr -cd , | wc -c); ((NUM_GPUS++))
   export USE_GT_BOX=True
   export USE_GT_OBJECT_LABEL=True
+  export USING_EXPLICIT_PAIRWISE_ONLY=True
   export USING_EXPLICIT_PAIRWISE=True
   export EXPLICIT_PAIRWISE_DATA='hadamard'
   export EXPLICIT_PAIRWISE_FUNC='mha'

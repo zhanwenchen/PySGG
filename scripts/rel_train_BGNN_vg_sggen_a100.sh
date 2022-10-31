@@ -7,7 +7,7 @@
 #SBATCH -t 48:00:00
 #SBATCH --cpus-per-task=4
 #SBATCH --mem=100GB# need to match batch size.
-#SBATCH -J bgnn_pairwise_hadamard_mha_4GPU_riv_1_sggen# TODO: CHANGE THIS
+#SBATCH -J bgnn_pairwise_hadamard_mha_4GPU_riv_1_sggen_2e3 # TODO: CHANGE THIS
 #SBATCH -o /home/pct4et/pysgg/log/%x-%A.out
 #SBATCH -e /home/pct4et/pysgg/log/%x-%A.err
 #SBATCH --mail-type=ALL
@@ -65,14 +65,15 @@ else
   export SEED=1234
   export BATCH_SIZE=24
   export MAX_ITER=50000
-  export LR=1e-3
+  export LR=2e-3
   export USE_GSC_FE=False
   export SINGULARITYENV_PREPEND_PATH="${HOME}/.conda/envs/pysgg/bin:/opt/conda/condabin"
-  # export CONFIG_FILE=configs/e2e_relation_X_101_32_8_FPN_1x_pairwise.yaml
+  export CONFIG_FILE=configs/e2e_relBGNN_vg_predcls.yaml
   export NUM_GPUS=$(nvidia-smi --query-gpu=name --format=csv,noheader | wc -l)
   export DATA_DIR_VG_RCNN=/project/sds-rise/zhanwen/datasets
   export USE_GT_BOX=False
   export USE_GT_OBJECT_LABEL=False
+  export USING_EXPLICIT_PAIRWISE_ONLY=False
   export USING_EXPLICIT_PAIRWISE=True
   export EXPLICIT_PAIRWISE_DATA='hadamard'
   export EXPLICIT_PAIRWISE_FUNC='mha'
