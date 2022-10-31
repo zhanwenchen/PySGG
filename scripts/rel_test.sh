@@ -60,5 +60,5 @@ python -m torch.distributed.launch --master_port $PORT --nproc_per_node=$NUM_GPU
   TEST.IMS_PER_BATCH $[$gpu_num] \
   MODEL.WEIGHT  "${MODEL_NAME}/model_${ITER}.pth"\
   MODEL.ROI_RELATION_HEAD.EVALUATE_REL_PROPOSAL False \
-  DATASETS.TEST "('VG_stanford_filtered_with_attribute_test', )" 2>&1 | tee ${MODEL_DIRNAME}/log_test.log &&
+  DATASETS.TEST "('VG_stanford_filtered_with_attribute_test', )" 2>&1 | tee ${MODEL_DIRNAME}/log_test_${ITER}.log &&
 echo "Finished testing ${MODE} model ${MODEL_NAME}" || echo "Failed to test ${MODE} model ${MODEL_NAME}"
