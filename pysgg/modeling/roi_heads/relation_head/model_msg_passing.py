@@ -128,7 +128,8 @@ class PairwiseFeatureExtractor(Module):
         super(PairwiseFeatureExtractor, self).__init__()
         self.cfg = config
         self.pairwise_detach = config.MODEL.ROI_RELATION_HEAD.PAIRWISE.DETACH
-        self.using_explicit_pairwise = config.MODEL.ROI_RELATION_HEAD.PAIRWISE.USING_EXPLICIT_PAIRWISE
+        self.using_explicit_pairwise = using_explicit_pairwise = config.MODEL.ROI_RELATION_HEAD.PAIRWISE.USING_EXPLICIT_PAIRWISE
+        self.using_explicit_pairwise_only = using_explicit_pairwise_only = config.MODEL.ROI_RELATION_HEAD.PAIRWISE.USING_EXPLICIT_PAIRWISE_ONLY
         self.explicit_pairwise_data = pairwise_method_data = config.MODEL.ROI_RELATION_HEAD.PAIRWISE.EXPLICIT_PAIRWISE_DATA
         self.explicit_pairwise_func = explicit_pairwise_func = config.MODEL.ROI_RELATION_HEAD.PAIRWISE.EXPLICIT_PAIRWISE_FUNC
 
@@ -154,20 +155,23 @@ class PairwiseFeatureExtractor(Module):
         # of objects
         self.embed_dim = embed_dim = self.cfg.MODEL.ROI_RELATION_HEAD.EMBED_DIM
         self.obj_dim = in_channels
-        self.hidden_dim = hidden_dim = self.cfg.MODEL.ROI_RELATION_HEAD.CONTEXT_HIDDEN_DIM
+        self.hidden_dim = hidden_dim = self.cfg.MODEL.ROI_RELATION_HEAD.CONTEXT_HIDDEN_DIM # 512
         self.pooling_dim = pooling_dim = self.cfg.MODEL.ROI_RELATION_HEAD.CONTEXT_POOLING_DIM
 
         # Pairwise
-        if explicit_pairwise_func == 'mha':
+        if using_explicit_pairwise is True and explicit_pairwise_func == 'mha':
             assert pairwise_method_data in METHODS_DATA_1D
             num_head_pairwise = config.MODEL.ROI_RELATION_HEAD.PAIRWISE.MHA.NUM_HEAD
             num_layers_pairwise = config.MODEL.ROI_RELATION_HEAD.PAIRWISE.MHA.NUM_LAYERS
+            # self.explicit_pairwise_func =  TransformerEncoder(TransformerEncoderLayer(d_model=hidden_dim, nhead=num_head_pairwise), num_layers_pairwise)
+
             self.explicit_pairwise_func = Sequential(
                 TransformerEncoder(TransformerEncoderLayer(d_model=hidden_dim, nhead=num_head_pairwise), num_layers_pairwise),
-                ReLU(inplace=True),
+                # ReLU(inplace=True),
                 make_fc(hidden_dim, pooling_dim),
                 ReLU(inplace=True),
             )
+            layer_init(self.explicit_pairwise_func[1], xavier=True)
 
         self.word_embed_feats_on = self.cfg.MODEL.ROI_RELATION_HEAD.WORD_EMBEDDING_FEATURES
         if self.word_embed_feats_on:
@@ -206,19 +210,22 @@ class PairwiseFeatureExtractor(Module):
 
         if self.rel_feature_type in {"obj_pair", "fusion"}:
             self.spatial_for_vision = config.MODEL.ROI_RELATION_HEAD.CAUSAL.SPATIAL_FOR_VISION
-            if self.spatial_for_vision:
-                self.spt_emb = Sequential(*[make_fc(32, self.hidden_dim),
-                                               ReLU(inplace=True),
-                                               make_fc(self.hidden_dim, self.hidden_dim * 2),
-                                               ReLU(inplace=True)
-                                               ])
-                layer_init(self.spt_emb[0], xavier=True)
-                layer_init(self.spt_emb[2], xavier=True)
+            if self.using_explicit_pairwise_only is False:
+                if self.spatial_for_vision:
+                    self.spt_emb = Sequential(*[make_fc(32, self.hidden_dim),
+                                                   ReLU(inplace=True),
+                                                   make_fc(self.hidden_dim, self.hidden_dim * 2),
+                                                   ReLU(inplace=True)
+                                                   ])
+                    layer_init(self.spt_emb[0], xavier=True)
+                    layer_init(self.spt_emb[2], xavier=True)
 
-            self.pairwise_rel_feat_finalize_fc = Sequential(
-                make_fc(self.hidden_dim * 2, self.pooling_dim),
-                ReLU(inplace=True),
-            )
+                self.pairwise_rel_feat_finalize_fc = Sequential(
+                    make_fc(self.hidden_dim * 2, self.pooling_dim),
+                    # make_fc(self.hidden_dim * 2, self.hidden_dim),
+                    ReLU(inplace=True),
+                )
+                layer_init(self.pairwise_rel_feat_finalize_fc[0], xavier=True)
 
         # map bidirectional hidden states of dimension self.hidden_dim*2 to self.hidden_dim
         self.obj_hidden_linear = make_fc(self.obj_dim + self.embed_dim + self.geometry_feat_dim, self.hidden_dim)
@@ -285,10 +292,12 @@ class PairwiseFeatureExtractor(Module):
         head_rep = head_rep[rel_pair_idxs_global_head]
         tail_rep = tail_rep[rel_pair_idxs_global_tail]
 
-        obj_pair_feat4rel_rep = torch_cat((head_rep, tail_rep), dim=-1)
-        obj_boxs = torch_cat(obj_boxs, dim=0)
-        pair_bbox_geo_info = get_box_pair_info(obj_boxs[rel_pair_idxs_global_head], obj_boxs[rel_pair_idxs_global_tail])
+        if self.using_explicit_pairwise_only is False:
+            obj_pair_feat4rel_rep = torch_cat((head_rep, tail_rep), dim=-1)
+            obj_boxs = torch_cat(obj_boxs, dim=0)
+            pair_bbox_geo_info = get_box_pair_info(obj_boxs[rel_pair_idxs_global_head], obj_boxs[rel_pair_idxs_global_tail])
         del rel_pair_idxs_global_head, rel_pair_idxs_global_tail
+
 
         # assert torch_equal(obj_pair_feat4rel_rep, prod_rep)
         # assert torch_equal(pair_bbox_geo_info, pair_bboxs_info_new)
@@ -301,19 +310,26 @@ class PairwiseFeatureExtractor(Module):
             tail_rep = tail_rep.clone().detach()
 
         if self.using_explicit_pairwise is True and self.explicit_pairwise_data == 'hadamard':
-            pairwise_obj_ctx = head_rep * tail_rep
+            pairwise_obj_ctx = head_rep * tail_rep # hidden_dim = 512
             del head_rep, tail_rep
 
-        if spatial_for_vision is True:
-            obj_pair_feat4rel_rep *= self.spt_emb(pair_bbox_geo_info)
+        if self.using_explicit_pairwise_only is True:
+            return self.explicit_pairwise_func(pairwise_obj_ctx)
+
+        if self.using_explicit_pairwise_only is False and spatial_for_vision is True:
+            obj_pair_feat4rel_rep *= self.spt_emb(pair_bbox_geo_info) # 512 * 2 = 1024
             del pair_bbox_geo_info
         # breakpoint()
         # pairwise_obj_ctx = self.explicit_pairwise_func(pairwise_obj_ctx)
         # obj_pair_feat4rel_rep = self.pairwise_rel_feat_finalize_fc(obj_pair_feat4rel_rep)  # (num_rel, hidden_dim)
-        if self.using_explicit_pairwise is False:
-            return self.pairwise_rel_feat_finalize_fc(obj_pair_feat4rel_rep), None
-        return self.pairwise_rel_feat_finalize_fc(obj_pair_feat4rel_rep), self.explicit_pairwise_func(pairwise_obj_ctx)
 
+        rel_features = self.pairwise_rel_feat_finalize_fc(obj_pair_feat4rel_rep)
+
+        if self.using_explicit_pairwise is True:
+            rel_features += self.explicit_pairwise_func(pairwise_obj_ctx)
+            # rel_features *= self.explicit_pairwise_func(pairwise_obj_ctx)
+        return rel_features  #1024=>2048 , 512 => pooling_dim
+        # This is the intermediate step but not the final.
 
     def forward(self, inst_roi_feats, union_features, inst_proposals, rel_pair_idxs, ):
         """
@@ -372,15 +388,11 @@ class PairwiseFeatureExtractor(Module):
             augment_obj_feat = torch_cat((inst_roi_feats, augment_obj_feat), -1)
 
         if self.rel_feature_type in {"obj_pair", "fusion"}:
-            rel_features, explicit_pairwise_features = self.pairwise_rel_features(augment_obj_feat, rel_pair_idxs, inst_proposals)
+            rel_features = self.pairwise_rel_features(augment_obj_feat, rel_pair_idxs, inst_proposals)
             if self.rel_feature_type == "fusion":
                 if self.rel_feat_dim_not_match:
                     union_features = self.rel_feature_up_dim(union_features)
-                # breakpoint()
-                if explicit_pairwise_features is None:
-                    rel_features = union_features + rel_features
-                else:
-                    rel_features = union_features + rel_features + explicit_pairwise_features
+                rel_features = union_features + rel_features
 
         elif self.rel_feature_type == "union":
             if self.rel_feat_dim_not_match:
