@@ -12,7 +12,7 @@
 #SBATCH -e /home/pct4et/pysgg/log/%x-%A.err
 #SBATCH --mail-type=ALL
 #SBATCH --mail-user=pct4et@virginia.edu
-#SBACTH --constraint=a100_80gb
+#SBATCH --constraint=a100_80gb
 
 timestamp() {
   date +"%Y-%m-%d %T"
